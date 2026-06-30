@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AgentStatus {
+  IDLE
+  WALKING
+  WORKING
+}
+
+enum TaskStatus {
+  BACKLOG
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  projectName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  agents Agent[]
+  tasks  Task[]
+
+  @@map("workspaces")
+}
+
+model Agent {
+  id          String      @id @default(uuid())
+  name        String
+  color       String?
+  status      AgentStatus @default(IDLE)
+  positionX   Float       @default(0)
+  positionY   Float       @default(0)
+  workspaceId String
+  currentTaskId String?   @unique
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  workspace     Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  currentTask   Task?      @relation("AgentCurrentTask", fields: [currentTaskId], references: [id], onDelete: SetNull)
+  assignedTasks Task[]     @relation("AssignedTasks")
+
+  @@map("agents")
+}
+
+model Task {
+  id            String     @id @default(uuid())
+  title         String
+  description   String?
+  status        TaskStatus @default(BACKLOG)
+  workspaceId   String
+  assignedAgentId String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  completedAt   DateTime?
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignedAgent Agent?   @relation("AssignedTasks", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  currentAgents Agent[]   @relation("AgentCurrentTask")
+
+  @@map("tasks")
+}

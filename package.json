@@ -1,0 +1,35 @@
+{
+  "name": "sams",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SAMS - Smart Agent Management System",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "lint:fix": "pnpm -r lint:fix",
+    "format": "pnpm -r format",
+    "clean": "pnpm -r clean",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "keywords": [
+    "monorepo",
+    "sams",
+    "agents",
+    "websocket"
+  ],
+  "author": "",
+  "license": "MIT"
+}

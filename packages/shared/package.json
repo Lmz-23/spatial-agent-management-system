@@ -1,0 +1,24 @@
+{
+  "name": "@sams/shared",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist node_modules .turbo tsconfig.tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "biome": "^0.3.3",
+    "typescript": "^5.4.0"
+  }
+}

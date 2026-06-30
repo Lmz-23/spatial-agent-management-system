@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+dist/
+.tmp/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+build/
+out/
+
+# Test
+coverage/
+
+# Prisma
+*.db
+*.db-journal
+
+# Misc
+*.tsbuildinfo

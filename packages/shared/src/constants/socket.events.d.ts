@@ -1,0 +1,50 @@
+export declare const SOCKET_EVENTS: {
+    readonly AGENT_POSITION_UPDATE: "agent:position:update";
+    readonly AGENT_STATUS_CHANGE: "agent:status:change";
+    readonly AGENT_CREATED: "agent:created";
+    readonly AGENT_UPDATED: "agent:updated";
+    readonly AGENT_DELETED: "agent:deleted";
+    readonly AGENT_ASSIGNED: "agent:assigned";
+    readonly TASK_CREATED: "task:created";
+    readonly TASK_UPDATED: "task:updated";
+    readonly TASK_COMPLETED: "task:completed";
+    readonly TASK_CANCELLED: "task:cancelled";
+    readonly TASK_ASSIGNED: "task:assigned";
+    readonly WORKSPACE_CREATED: "workspace:created";
+    readonly WORKSPACE_UPDATED: "workspace:updated";
+    readonly WORKSPACE_DELETED: "workspace:deleted";
+    readonly OFFICE_CREATED: "office:created";
+    readonly OFFICE_UPDATED: "office:updated";
+    readonly OFFICE_DELETED: "office:deleted";
+    readonly DESK_CREATED: "desk:created";
+    readonly DESK_UPDATED: "desk:updated";
+    readonly DESK_DELETED: "desk:deleted";
+    readonly DESK_OCCUPANCY_CHANGE: "desk:occupancy:change";
+    readonly CONNECTION: "connection";
+    readonly DISCONNECT: "disconnect";
+    readonly ERROR: "error";
+    readonly SUBSCRIBE: "subscribe";
+    readonly UNSUBSCRIBE: "unsubscribe";
+    readonly SUBSCRIBED: "subscribed";
+    readonly UNSUBSCRIBED: "unsubscribed";
+};
+export declare const ROOM_EVENTS: {
+    readonly JOIN_WORKSPACE: "room:join:workspace";
+    readonly LEAVE_WORKSPACE: "room:leave:workspace";
+    readonly JOIN_OFFICE: "room:join:office";
+    readonly LEAVE_OFFICE: "room:leave:office";
+};
+export declare const ERROR_CODES: {
+    readonly VALIDATION_ERROR: "VALIDATION_ERROR";
+    readonly NOT_FOUND: "NOT_FOUND";
+    readonly ALREADY_EXISTS: "ALREADY_EXISTS";
+    readonly UNAUTHORIZED: "UNAUTHORIZED";
+    readonly FORBIDDEN: "FORBIDDEN";
+    readonly INTERNAL_ERROR: "INTERNAL_ERROR";
+    readonly WS_CONNECTION_ERROR: "WS_CONNECTION_ERROR";
+    readonly INVALID_MESSAGE: "INVALID_MESSAGE";
+};
+export type SocketEventType = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];
+export type RoomEventType = (typeof ROOM_EVENTS)[keyof typeof ROOM_EVENTS];
+export type ErrorCodeType = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
+//# sourceMappingURL=socket.events.d.ts.map
