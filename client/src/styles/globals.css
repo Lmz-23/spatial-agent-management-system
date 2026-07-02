@@ -1,0 +1,147 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  background-color: #0f0f1a;
+  color: #ffffff;
+}
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background-color: #1a1a2e;
+  border-bottom: 2px solid #4cc9f0;
+}
+
+.header-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #4cc9f0;
+}
+
+.header-subtitle {
+  font-size: 0.875rem;
+  color: #888;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 280px;
+  background-color: #1a1a2e;
+  border-left: 1px solid #2a2a4e;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #2a2a4e;
+}
+
+.sidebar-header h2 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.agent-count {
+  background-color: #4cc9f0;
+  color: #0f0f1a;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.agent-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.no-agents {
+  text-align: center;
+  color: #666;
+  padding: 24px;
+  font-size: 0.875rem;
+}
+
+.agent-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  background-color: #0f0f1a;
+  transition: background-color 0.15s;
+}
+
+.agent-item:hover {
+  background-color: #2a2a4e;
+}
+
+.agent-color {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.agent-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agent-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.agent-status {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.agent-position {
+  font-size: 0.7rem;
+  color: #666;
+  font-family: monospace;
+}
+
+.workspace-info {
+  padding: 12px 16px;
+  border-top: 1px solid #2a2a4e;
+  font-size: 0.75rem;
+  color: #666;
+}

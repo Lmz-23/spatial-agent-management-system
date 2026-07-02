@@ -1,17 +1,116 @@
-import type { PrismaClient, Task, Workspace, Agent } from '@prisma/client';
+import type { PrismaClient, Task, Workspace, Agent, TaskStatus, TaskPriority } from '@prisma/client';
 import type { CreateTaskDto } from './dto/create-task.dto.js';
 import type { UpdateTaskDto } from './dto/update-task.dto.js';
-import type { TaskStatus } from '@prisma/client';
 
 export type TaskWithRelations = Task & {
   assignedAgent: Agent | null;
   workspace: Workspace;
 };
 
+export type TaskBasic = Pick<Task, 'id' | 'title' | 'description' | 'status' | 'workspaceId' | 'assignedAgentId' | 'createdAt' | 'updatedAt' | 'completedAt'>;
+
 export class TasksRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  /**
+   * Mock data for development without database connection.
+   * These are simplified in-memory implementations.
+   * DO NOT use in production.
+   */
+  private readonly mockWorkspace: Workspace = {
+    id: 'mock-workspace',
+    name: 'Demo Workspace',
+    projectName: 'Demo Project',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  /**
+   * Mock data for development without database connection.
+   * These are simplified in-memory implementations.
+   * DO NOT use in production.
+   */
+  private readonly mockAgents: Agent[] = [
+    {
+      id: 'mock-1',
+      name: 'Agent Alice',
+      color: '#FF5733',
+      status: 'IDLE',
+      positionX: 100,
+      positionY: 200,
+      workspaceId: 'mock-workspace',
+      currentTaskId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: 'mock-2',
+      name: 'Agent Bob',
+      color: '#33FF57',
+      status: 'WORKING',
+      positionX: 300,
+      positionY: 150,
+      workspaceId: 'mock-workspace',
+      currentTaskId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
+
+  /**
+   * Mock data for development without database connection.
+   * These are simplified in-memory implementations.
+   * DO NOT use in production.
+   */
+  private readonly mockTasks: TaskWithRelations[] = [
+    {
+      id: 'mock-task-1',
+      title: 'Design System Setup',
+      description: 'Set up the design system components',
+      status: 'BACKLOG' as TaskStatus,
+      priority: 'MEDIUM' as TaskPriority,
+      workspaceId: 'mock-workspace',
+      assignedAgentId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      completedAt: null,
+      assignedAgent: null,
+      workspace: this.mockWorkspace,
+    },
+    {
+      id: 'mock-task-2',
+      title: 'API Integration',
+      description: 'Integrate with external API services',
+      status: 'IN_PROGRESS' as TaskStatus,
+      priority: 'HIGH' as TaskPriority,
+      workspaceId: 'mock-workspace',
+      assignedAgentId: 'mock-1',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      completedAt: null,
+      assignedAgent: this.mockAgents[0]!,
+      workspace: this.mockWorkspace,
+    },
+    {
+      id: 'mock-task-3',
+      title: 'User Authentication',
+      description: 'Implement user login and registration',
+      status: 'BACKLOG' as TaskStatus,
+      priority: 'LOW' as TaskPriority,
+      workspaceId: 'mock-workspace',
+      assignedAgentId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      completedAt: null,
+      assignedAgent: null,
+      workspace: this.mockWorkspace,
+    },
+  ];
+
+  constructor(private readonly prisma: PrismaClient | null) {}
 
   async findAll(): Promise<TaskWithRelations[]> {
+    if (!this.prisma) {
+      return this.mockTasks;
+    }
     return this.prisma.task.findMany({
       include: {
         assignedAgent: true,
@@ -21,7 +120,30 @@ export class TasksRepository {
     });
   }
 
+  async findAllBasic(): Promise<TaskBasic[]> {
+    if (!this.prisma) {
+      return this.mockTasks;
+    }
+    return this.prisma.task.findMany({
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        status: true,
+        workspaceId: true,
+        assignedAgentId: true,
+        createdAt: true,
+        updatedAt: true,
+        completedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findAllByWorkspace(workspaceId: string): Promise<TaskWithRelations[]> {
+    if (!this.prisma) {
+      return this.mockTasks.filter(t => t.workspaceId === workspaceId);
+    }
     return this.prisma.task.findMany({
       where: { workspaceId },
       include: {
@@ -32,7 +154,31 @@ export class TasksRepository {
     });
   }
 
+  async findAllByWorkspaceBasic(workspaceId: string): Promise<TaskBasic[]> {
+    if (!this.prisma) {
+      return this.mockTasks.filter(t => t.workspaceId === workspaceId);
+    }
+    return this.prisma.task.findMany({
+      where: { workspaceId },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        status: true,
+        workspaceId: true,
+        assignedAgentId: true,
+        createdAt: true,
+        updatedAt: true,
+        completedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findById(id: string): Promise<TaskWithRelations | null> {
+    if (!this.prisma) {
+      return this.mockTasks.find(t => t.id === id) || null;
+    }
     return this.prisma.task.findUnique({
       where: { id },
       include: {
@@ -43,6 +189,23 @@ export class TasksRepository {
   }
 
   async create(data: CreateTaskDto): Promise<TaskWithRelations> {
+    if (!this.prisma) {
+      const newTask: TaskWithRelations = {
+        id: crypto.randomUUID(),
+        title: data.title,
+        description: data.description ?? null,
+        status: (data.status ?? 'BACKLOG') as TaskStatus,
+        priority: (data.priority ?? 'MEDIUM') as TaskPriority,
+        workspaceId: data.workspaceId,
+        assignedAgentId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        completedAt: null,
+        assignedAgent: null,
+        workspace: this.mockWorkspace,
+      };
+      return newTask;
+    }
     return this.prisma.task.create({
       data: {
         id: crypto.randomUUID(),
@@ -61,6 +224,17 @@ export class TasksRepository {
   }
 
   async update(id: string, data: UpdateTaskDto): Promise<TaskWithRelations | null> {
+    if (!this.prisma) {
+      const task = this.mockTasks.find(t => t.id === id);
+      if (!task) return null;
+      return {
+        ...task,
+        title: data.title ?? task.title,
+        description: data.description ?? task.description,
+        status: (data.status ?? task.status) as TaskStatus,
+        updatedAt: new Date(),
+      };
+    }
     try {
       const updateData: Partial<Task> = {};
       if (data.title !== undefined) updateData.title = data.title;
@@ -81,6 +255,9 @@ export class TasksRepository {
   }
 
   async delete(id: string): Promise<boolean> {
+    if (!this.prisma) {
+      return true;
+    }
     try {
       await this.prisma.task.delete({ where: { id } });
       return true;
@@ -93,6 +270,15 @@ export class TasksRepository {
     taskId: string,
     agentId: string,
   ): Promise<{ task: TaskWithRelations; agent: Agent } | null> {
+    if (!this.prisma) {
+      const task = this.mockTasks.find(t => t.id === taskId);
+      const agent = this.mockAgents.find(a => a.id === agentId);
+      if (!task || !agent) return null;
+      return {
+        task: { ...task, assignedAgentId: agentId, status: 'IN_PROGRESS' as TaskStatus, assignedAgent: agent },
+        agent: { ...agent, status: 'WORKING', currentTaskId: taskId },
+      };
+    }
     try {
       const result = await this.prisma.$transaction(async (tx) => {
         const task = await tx.task.update({

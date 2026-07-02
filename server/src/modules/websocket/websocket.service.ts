@@ -50,7 +50,7 @@ export class WebSocketService {
     }
   }
 
-  broadcastToWorkspace(workspaceId: string, event: string, data: object): void {
+  async broadcastToWorkspace(workspaceId: string, event: string, data: object): Promise<void> {
     const room = this.rooms.get(workspaceId);
     if (!room) {
       return;
@@ -86,11 +86,15 @@ export function createAgentHandlers(service: WebSocketService) {
       positionX: number,
       positionY: number,
       workspaceId: string,
+      rotation?: number,
+      floor?: number,
     ): void {
       service.broadcastToWorkspace(workspaceId, SOCKET_EVENTS.AGENT_POSITION_UPDATE, {
         agentId,
         positionX,
         positionY,
+        rotation,
+        floor,
         workspaceId,
       });
     },
@@ -106,7 +110,7 @@ export function createAgentHandlers(service: WebSocketService) {
     handleCreated(agentId: string, data: unknown, workspaceId: string): void {
       service.broadcastToWorkspace(workspaceId, SOCKET_EVENTS.AGENT_CREATED, {
         agentId,
-        ...(data as object),
+        ...(data as Record<string, unknown>),
         workspaceId,
       });
     },
@@ -114,7 +118,7 @@ export function createAgentHandlers(service: WebSocketService) {
     handleUpdated(agentId: string, data: unknown, workspaceId: string): void {
       service.broadcastToWorkspace(workspaceId, SOCKET_EVENTS.AGENT_UPDATED, {
         agentId,
-        ...(data as object),
+        ...(data as Record<string, unknown>),
         workspaceId,
       });
     },
@@ -155,7 +159,7 @@ export function createTaskHandlers(service: WebSocketService) {
     handleCreated(taskId: string, data: unknown, workspaceId: string): void {
       service.broadcastToWorkspace(workspaceId, SOCKET_EVENTS.TASK_CREATED, {
         taskId,
-        ...(data as object),
+        ...(data as Record<string, unknown>),
         workspaceId,
       });
     },
@@ -163,7 +167,7 @@ export function createTaskHandlers(service: WebSocketService) {
     handleUpdated(taskId: string, data: unknown, workspaceId: string): void {
       service.broadcastToWorkspace(workspaceId, SOCKET_EVENTS.TASK_UPDATED, {
         taskId,
-        ...(data as object),
+        ...(data as Record<string, unknown>),
         workspaceId,
       });
     },
@@ -197,14 +201,14 @@ export function createWorkspaceHandlers(service: WebSocketService) {
     handleCreated(workspaceId: string, data: unknown): void {
       service.broadcastToWorkspace(workspaceId, SOCKET_EVENTS.WORKSPACE_CREATED, {
         workspaceId,
-        ...(data as object),
+        ...(data as Record<string, unknown>),
       });
     },
 
     handleUpdated(workspaceId: string, data: unknown): void {
       service.broadcastToWorkspace(workspaceId, SOCKET_EVENTS.WORKSPACE_UPDATED, {
         workspaceId,
-        ...(data as object),
+        ...(data as Record<string, unknown>),
       });
     },
 
@@ -218,7 +222,7 @@ export function createWorkspaceHandlers(service: WebSocketService) {
       service.broadcastToWorkspace(workspaceId, SOCKET_EVENTS.OFFICE_CREATED, {
         officeId,
         workspaceId,
-        ...(data as object),
+        ...(data as Record<string, unknown>),
       });
     },
 
@@ -226,7 +230,7 @@ export function createWorkspaceHandlers(service: WebSocketService) {
       service.broadcastToWorkspace(workspaceId, SOCKET_EVENTS.OFFICE_UPDATED, {
         officeId,
         workspaceId,
-        ...(data as object),
+        ...(data as Record<string, unknown>),
       });
     },
 
@@ -242,7 +246,7 @@ export function createWorkspaceHandlers(service: WebSocketService) {
         deskId,
         officeId,
         workspaceId,
-        ...(data as object),
+        ...(data as Record<string, unknown>),
       });
     },
 
@@ -251,7 +255,7 @@ export function createWorkspaceHandlers(service: WebSocketService) {
         deskId,
         officeId,
         workspaceId,
-        ...(data as object),
+        ...(data as Record<string, unknown>),
       });
     },
 

@@ -10,8 +10,18 @@ export interface PositionUpdate {
 export class PositionService {
   private updates: Map<string, PositionUpdate[]> = new Map();
   private maxHistory = 100;
+  private readonly MAX_INACTIVE_MS = 5 * 60 * 1000; // 5 minutos
 
   recordUpdate(agentId: string, position: Position, rotation: number): void {
+    // Cleanup del agente específico si está inactivo
+    const existing = this.updates.get(agentId);
+    if (existing) {
+      const lastUpdate = existing[existing.length - 1];
+      if (lastUpdate && Date.now() - lastUpdate.timestamp > this.MAX_INACTIVE_MS) {
+        this.updates.delete(agentId);
+      }
+    }
+
     const update: PositionUpdate = {
       agentId,
       position,
@@ -27,6 +37,16 @@ export class PositionService {
     }
 
     this.updates.set(agentId, agentUpdates);
+  }
+
+  cleanupInactiveAgents(): void {
+    const now = Date.now();
+    for (const [agentId, updates] of this.updates.entries()) {
+      const lastUpdate = updates[updates.length - 1];
+      if (lastUpdate && now - lastUpdate.timestamp > this.MAX_INACTIVE_MS) {
+        this.updates.delete(agentId);
+      }
+    }
   }
 
   getLatestPosition(agentId: string): PositionUpdate | null {

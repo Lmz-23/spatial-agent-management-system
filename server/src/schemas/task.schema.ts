@@ -1,0 +1,31 @@
+import { z } from 'zod';
+
+export const createTaskSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().max(1000).optional(),
+  status: z.enum(['BACKLOG', 'IN_PROGRESS', 'REVIEW', 'DONE']).optional(),
+  priority: z.number().int().min(1).max(5).optional(),
+  workspaceId: z.string().uuid(),
+  assignedAgentId: z.string().uuid().optional(),
+});
+
+export const updateTaskSchema = z.object({
+  title: z.string().min(1).max(255).optional(),
+  description: z.string().max(1000).optional(),
+  status: z.enum(['BACKLOG', 'IN_PROGRESS', 'REVIEW', 'DONE']).optional(),
+  priority: z.number().int().min(1).max(5).optional(),
+  assignedAgentId: z.string().uuid().nullable().optional(),
+});
+
+export const taskIdParamSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const taskWithAgentIdParamSchema = z.object({
+  id: z.string().uuid(),
+  agentId: z.string().uuid(),
+});
+
+export const workspaceIdParamSchema = z.object({
+  workspaceId: z.string().uuid(),
+});

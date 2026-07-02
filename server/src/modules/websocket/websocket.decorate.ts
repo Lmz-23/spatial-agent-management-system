@@ -5,7 +5,7 @@ import { WebSocketService } from './websocket.service.js';
 
 const websocketDecoratePlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   const wsService = new WebSocketService();
-  const wsGateway = new WebSocketGateway(wsService);
+  const wsGateway = new WebSocketGateway(wsService, fastify.log);
 
   fastify.decorate('wsService', wsService);
   fastify.decorate('wsGateway', wsGateway);

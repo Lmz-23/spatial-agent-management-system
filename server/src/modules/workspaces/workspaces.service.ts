@@ -2,6 +2,7 @@ import type { WorkspacesRepository } from './workspaces.repository.js';
 import type { CreateWorkspaceDto } from './dto/create-workspace.dto.js';
 import type { UpdateWorkspaceDto } from './dto/update-workspace.dto.js';
 import type { WorkspaceResponseDto } from './dto/workspace-response.dto.js';
+import { NotFoundError, ValidationError } from '../../utils/errors/app.error.js';
 
 export class WorkspacesService {
   constructor(private readonly repository: WorkspacesRepository) {}
@@ -14,13 +15,13 @@ export class WorkspacesService {
     try {
       return await this.repository.findByIdOrThrow(id);
     } catch {
-      throw new Error('Workspace not found');
+      throw new NotFoundError('Workspace');
     }
   }
 
   async create(data: CreateWorkspaceDto): Promise<WorkspaceResponseDto> {
     if (!data.name || data.name.trim() === '') {
-      throw new Error('Name is required');
+      throw new ValidationError('Name is required');
     }
     return this.repository.create({
       name: data.name.trim(),
@@ -32,7 +33,7 @@ export class WorkspacesService {
     try {
       await this.repository.findByIdOrThrow(id);
     } catch {
-      throw new Error('Workspace not found');
+      throw new NotFoundError('Workspace');
     }
     return this.repository.update(id, {
       name: data.name?.trim(),
@@ -44,7 +45,7 @@ export class WorkspacesService {
     try {
       await this.repository.findByIdOrThrow(id);
     } catch {
-      throw new Error('Workspace not found');
+      throw new NotFoundError('Workspace');
     }
     await this.repository.delete(id);
   }

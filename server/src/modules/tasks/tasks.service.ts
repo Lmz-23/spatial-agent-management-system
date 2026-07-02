@@ -5,6 +5,8 @@ import type { TaskResponseDto } from './dto/task-response.dto.js';
 import type { TaskWithRelations } from './tasks.repository.js';
 import { TasksRepository } from './tasks.repository.js';
 import { WebSocketService } from '../websocket/websocket.service.js';
+import type { FastifyBaseLogger } from 'fastify';
+import { NotFoundError, ValidationError } from '../../utils/errors/app.error.js';
 
 const VALID_STATUSES = ['BACKLOG', 'IN_PROGRESS', 'REVIEW', 'DONE'] as const;
 type ValidStatus = (typeof VALID_STATUSES)[number];
@@ -14,6 +16,7 @@ export class TasksService {
     private readonly repository: TasksRepository,
     private readonly prisma: PrismaClient,
     private readonly wsService: WebSocketService,
+    private readonly log: FastifyBaseLogger,
   ) {}
 
   async getAll(): Promise<TaskResponseDto[]> {
@@ -34,12 +37,12 @@ export class TasksService {
   async create(data: CreateTaskDto): Promise<TaskResponseDto> {
     // Validate title is required
     if (!data.title || data.title.trim().length === 0) {
-      throw new Error('Title is required');
+      throw new ValidationError('Title is required');
     }
 
     // Validate status if provided
     if (data.status && !this.isValidStatus(data.status)) {
-      throw new Error(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
+      throw new ValidationError(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
     }
 
     // Validate workspace exists
@@ -54,7 +57,7 @@ export class TasksService {
         workspaceId: task.workspaceId,
       });
     } catch (error) {
-      console.error('Failed to emit task:created event:', error);
+      this.log.error({ err: error }, 'Failed to emit task:created event');
     }
 
     return this.toResponseDto(task);
@@ -63,7 +66,7 @@ export class TasksService {
   async update(id: string, data: UpdateTaskDto): Promise<TaskResponseDto | null> {
     // Validate status if provided
     if (data.status && !this.isValidStatus(data.status)) {
-      throw new Error(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
+      throw new ValidationError(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`);
     }
 
     // Check task exists
@@ -83,7 +86,7 @@ export class TasksService {
           workspaceId: task.workspaceId,
         });
       } catch (error) {
-        console.error('Failed to emit task:status:update event:', error);
+        this.log.error({ err: error }, 'Failed to emit task:status:update event');
       }
     }
 
@@ -103,7 +106,7 @@ export class TasksService {
         workspaceId: existing.workspaceId,
       });
     } catch (error) {
-      console.error('Failed to emit task:deleted event:', error);
+      this.log.error({ err: error }, 'Failed to emit task:deleted event');
     }
 
     return this.repository.delete(id);
@@ -113,13 +116,13 @@ export class TasksService {
     // Step 1: Verify task exists
     const task = await this.repository.findById(taskId);
     if (!task) {
-      throw new Error('Task not found');
+      throw new NotFoundError('Task');
     }
 
     // Step 2: Verify agent exists
     const agent = await this.prisma.agent.findUnique({ where: { id: agentId } });
     if (!agent) {
-      throw new Error('Agent not found');
+      throw new NotFoundError('Agent');
     }
 
     // Step 3: Update task with assignedAgentId and status = IN_PROGRESS
@@ -144,7 +147,7 @@ export class TasksService {
         workspaceId: agent.workspaceId,
       });
     } catch (error) {
-      console.error('Failed to emit WebSocket events in assignToAgent:', error);
+      this.log.error({ err: error }, 'Failed to emit WebSocket events in assignToAgent');
     }
 
     return this.toResponseDto(result.task);
@@ -159,7 +162,7 @@ export class TasksService {
       where: { id: workspaceId },
     });
     if (!workspace) {
-      throw new Error('Workspace not found');
+      throw new NotFoundError('Workspace');
     }
     return workspace;
   }

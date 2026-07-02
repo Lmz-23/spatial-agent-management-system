@@ -20,6 +20,13 @@ enum TaskStatus {
   DONE
 }
 
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
 model Workspace {
   id          String   @id @default(uuid())
   name        String
@@ -49,23 +56,27 @@ model Agent {
   currentTask   Task?      @relation("AgentCurrentTask", fields: [currentTaskId], references: [id], onDelete: SetNull)
   assignedTasks Task[]     @relation("AssignedTasks")
 
+  @@index([workspaceId])
   @@map("agents")
 }
 
 model Task {
-  id            String     @id @default(uuid())
+  id            String       @id @default(uuid())
   title         String
   description   String?
-  status        TaskStatus @default(BACKLOG)
+  status        TaskStatus   @default(BACKLOG)
+  priority      TaskPriority @default(MEDIUM)
   workspaceId   String
   assignedAgentId String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   completedAt   DateTime?
 
   workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   assignedAgent Agent?   @relation("AssignedTasks", fields: [assignedAgentId], references: [id], onDelete: SetNull)
   currentAgents Agent[]   @relation("AgentCurrentTask")
 
+  @@index([workspaceId])
+  @@index([assignedAgentId])
   @@map("tasks")
 }

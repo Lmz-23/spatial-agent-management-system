@@ -11,11 +11,13 @@ const corsPlugin: FastifyPluginAsync<CorsPluginOptions> = async (
   fastify: FastifyInstance,
   options: CorsPluginOptions,
 ) => {
+  const origin = typeof options.origin === 'string' ? [options.origin] : options.origin;
+
   await fastify.register(cors, {
-    origin: options.origin,
+    origin,
     credentials: options.credentials,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Upgrade', 'Connection'],
   });
 
   fastify.log.info('CORS plugin initialized');

@@ -3,6 +3,8 @@ import type { AgentsRepository, AgentWithRelations } from './agents.repository.j
 import type { CreateAgentDto, UpdateAgentDto, UpdatePositionDto, UpdateStatusDto } from './dto/create-agent.dto.js';
 import type { AgentResponseDto } from './dto/agent-response.dto.js';
 import type { WebSocketService } from '../websocket/websocket.service.js';
+import type { FastifyBaseLogger } from 'fastify';
+import { NotFoundError, ValidationError } from '../../utils/errors/app.error.js';
 
 const VALID_STATUSES = ['IDLE', 'WALKING', 'WORKING'] as const;
 type ValidStatus = typeof VALID_STATUSES[number];
@@ -12,6 +14,7 @@ export class AgentsService {
     private readonly repository: AgentsRepository,
     private readonly prisma: PrismaClient,
     private readonly wsService: WebSocketService,
+    private readonly log: FastifyBaseLogger,
   ) {}
 
   async getAll(): Promise<AgentResponseDto[]> {
@@ -22,7 +25,7 @@ export class AgentsService {
   async getById(id: string): Promise<AgentResponseDto> {
     const agent = await this.repository.findById(id);
     if (!agent) {
-      throw { statusCode: 404, message: 'Agent not found' };
+      throw new NotFoundError('Agent');
     }
     return this.toResponseDto(agent);
   }
@@ -34,12 +37,12 @@ export class AgentsService {
 
   async create(data: CreateAgentDto): Promise<AgentResponseDto> {
     if (!data.name || data.name.trim() === '') {
-      throw { statusCode: 400, message: 'Name is required' };
+      throw new ValidationError('Name is required');
     }
 
     const workspace = await this.prisma.workspace.findUnique({ where: { id: data.workspaceId } });
     if (!workspace) {
-      throw { statusCode: 400, message: 'Workspace not found' };
+      throw new NotFoundError('Workspace');
     }
 
     const newAgent = await this.repository.create({
@@ -53,7 +56,7 @@ export class AgentsService {
         workspaceId: data.workspaceId,
       });
     } catch (error) {
-      console.error('Failed to emit agent:created event:', error);
+      this.log.error({ err: error }, 'Failed to emit agent:created event');
     }
 
     return this.toResponseDto(newAgent);
@@ -62,12 +65,12 @@ export class AgentsService {
   async update(id: string, data: UpdateAgentDto): Promise<AgentResponseDto> {
     const existing = await this.repository.findById(id);
     if (!existing) {
-      throw { statusCode: 404, message: 'Agent not found' };
+      throw new NotFoundError('Agent');
     }
 
     const agent = await this.repository.update(id, data);
     if (!agent) {
-      throw { statusCode: 404, message: 'Agent not found' };
+      throw new NotFoundError('Agent');
     }
     return this.toResponseDto(agent);
   }
@@ -75,7 +78,7 @@ export class AgentsService {
   async remove(id: string): Promise<void> {
     const agent = await this.repository.findById(id);
     if (!agent) {
-      throw { statusCode: 404, message: 'Agent not found' };
+      throw new NotFoundError('Agent');
     }
 
     try {
@@ -84,7 +87,7 @@ export class AgentsService {
         workspaceId: agent.workspaceId,
       });
     } catch (error) {
-      console.error('Failed to emit agent:deleted event:', error);
+      this.log.error({ err: error }, 'Failed to emit agent:deleted event');
     }
 
     await this.repository.delete(id);
@@ -93,12 +96,12 @@ export class AgentsService {
   async updatePosition(id: string, data: UpdatePositionDto): Promise<AgentResponseDto> {
     const existing = await this.repository.findById(id);
     if (!existing) {
-      throw { statusCode: 404, message: 'Agent not found' };
+      throw new NotFoundError('Agent');
     }
 
     const agent = await this.repository.updatePosition(id, data.positionX, data.positionY);
     if (!agent) {
-      throw { statusCode: 404, message: 'Agent not found' };
+      throw new NotFoundError('Agent');
     }
 
     try {
@@ -109,7 +112,7 @@ export class AgentsService {
         workspaceId: agent.workspaceId,
       });
     } catch (error) {
-      console.error('Failed to emit agent:position:update event:', error);
+      this.log.error({ err: error }, 'Failed to emit agent:position:update event');
     }
 
     return this.toResponseDto(agent);
@@ -118,17 +121,17 @@ export class AgentsService {
   async updateStatus(id: string, data: UpdateStatusDto): Promise<AgentResponseDto> {
     const existing = await this.repository.findById(id);
     if (!existing) {
-      throw { statusCode: 404, message: 'Agent not found' };
+      throw new NotFoundError('Agent');
     }
 
     const upperStatus = data.status.toUpperCase() as ValidStatus;
     if (!this.isValidStatus(upperStatus)) {
-      throw { statusCode: 400, message: `Invalid status. Valid values are: ${VALID_STATUSES.join(', ')}` };
+      throw new ValidationError(`Invalid status. Valid values are: ${VALID_STATUSES.join(', ')}`);
     }
 
     const agent = await this.repository.updateStatus(id, upperStatus);
     if (!agent) {
-      throw { statusCode: 404, message: 'Agent not found' };
+      throw new NotFoundError('Agent');
     }
 
     try {
@@ -138,7 +141,7 @@ export class AgentsService {
         workspaceId: agent.workspaceId,
       });
     } catch (error) {
-      console.error('Failed to emit agent:status:update event:', error);
+      this.log.error({ err: error }, 'Failed to emit agent:status:update event');
     }
 
     return this.toResponseDto(agent);

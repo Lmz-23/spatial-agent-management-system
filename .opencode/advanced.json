@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "setupDate": "2026-07-02",
+  "languages": [
+    "node",
+    "docker"
+  ],
+  "framework": null,
+  "packageManager": "pnpm",
+  "agents": [],
+  "skills": [
+    "git-release",
+    "pr-review",
+    "test-patterns",
+    "deploy",
+    "dependency-audit",
+    "docker-optimize",
+    "api-contract",
+    "changelog-generate",
+    "ci-pipeline",
+    "performance-profile"
+  ],
+  "modelStrategy": null,
+  "mcp": []
+}
