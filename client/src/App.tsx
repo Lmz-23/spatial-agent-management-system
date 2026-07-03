@@ -1,4 +1,4 @@
-import { OfficeCanvas } from './components/simulation/OfficeCanvas';
+import { OfficeView } from './components/simulation/OfficeView';
 import { useAgents } from './hooks/useAgents';
 import { LoginScreen } from './components/LoginScreen';
 import { useAgentsStore } from './store';
@@ -81,7 +81,7 @@ export function App() {
     <div className="app">
       <Header />
       <main className="main-content">
-        <OfficeCanvas />
+        <OfficeView />
         <Sidebar />
       </main>
     </div>

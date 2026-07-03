@@ -51,7 +51,10 @@ export function useAgents() {
           const data = await response.json();
           // Ensure data is an array (API might return { agents: [...] } or direct array)
           const agentsArray = Array.isArray(data) ? data : (data?.agents || data?.data || []);
-          setAgents(agentsArray);
+          // Only update agents if API returned real data, otherwise preserve existing agents (e.g., demo agents)
+          if (agentsArray.length > 0) {
+            setAgents(agentsArray);
+          }
 
           // Get workspaceId from first agent - useEffect in useWebSocket will handle connection
           if (agentsArray.length > 0 && agentsArray[0].workspaceId) {
