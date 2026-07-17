@@ -1,4 +1,5 @@
 import type { PrismaClient, Agent, Workspace, Task, AgentStatus } from '@prisma/client';
+import { AgentRole } from '@prisma/client';
 import type { CreateAgentDto, UpdateAgentDto } from './dto/create-agent.dto.js';
 
 export type AgentWithRelations = Agent & {
@@ -37,6 +38,8 @@ export class AgentsRepository {
       positionY: 200,
       workspaceId: 'mock-workspace',
       currentTaskId: null,
+      role: AgentRole.ORCHESTRATOR,
+      isParallelSafe: false,
       createdAt: new Date(),
       updatedAt: new Date(),
       workspace: this.mockWorkspace,
@@ -51,6 +54,8 @@ export class AgentsRepository {
       positionY: 150,
       workspaceId: 'mock-workspace',
       currentTaskId: null,
+      role: AgentRole.BACKEND_CODER,
+      isParallelSafe: false,
       createdAt: new Date(),
       updatedAt: new Date(),
       workspace: this.mockWorkspace,
@@ -65,6 +70,8 @@ export class AgentsRepository {
       positionY: 300,
       workspaceId: 'mock-workspace',
       currentTaskId: null,
+      role: AgentRole.REVIEWER,
+      isParallelSafe: false,
       createdAt: new Date(),
       updatedAt: new Date(),
       workspace: this.mockWorkspace,
@@ -161,6 +168,8 @@ export class AgentsRepository {
         positionY: data.positionY ?? 0,
         workspaceId: data.workspaceId,
         currentTaskId: null,
+        role: AgentRole.ORCHESTRATOR,
+        isParallelSafe: false,
         createdAt: new Date(),
         updatedAt: new Date(),
         workspace: this.mockWorkspace,
@@ -176,6 +185,7 @@ export class AgentsRepository {
         positionX: data.positionX ?? 0,
         positionY: data.positionY ?? 0,
         status: 'IDLE',
+        role: AgentRole.ORCHESTRATOR,
       },
       include: {
         workspace: true,

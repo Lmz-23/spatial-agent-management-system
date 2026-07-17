@@ -1,4 +1,4 @@
-import { PrismaClient, AgentStatus, TaskStatus } from '@prisma/client';
+import { PrismaClient, AgentStatus, AgentRole, TaskStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -30,6 +30,7 @@ async function main() {
         positionX: 100,
         positionY: 200,
         workspaceId: workspace.id,
+        role: AgentRole.ORCHESTRATOR,
       },
     }),
     prisma.agent.create({
@@ -40,6 +41,7 @@ async function main() {
         positionX: 300,
         positionY: 150,
         workspaceId: workspace.id,
+        role: AgentRole.BACKEND_CODER,
       },
     }),
     prisma.agent.create({
@@ -50,6 +52,7 @@ async function main() {
         positionX: 500,
         positionY: 300,
         workspaceId: workspace.id,
+        role: AgentRole.REVIEWER,
       },
     }),
   ]);
@@ -79,7 +82,7 @@ async function main() {
       data: {
         title: 'Review de código',
         description: 'Revisar PR #42',
-        status: TaskStatus.REVIEW,
+        status: TaskStatus.IN_REVIEW,
         workspaceId: workspace.id,
         assignedAgentId: agents[1]!.id,
       },

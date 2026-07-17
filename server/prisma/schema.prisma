@@ -13,11 +13,35 @@ enum AgentStatus {
   WORKING
 }
 
+enum AgentRole {
+  ORCHESTRATOR
+  ANALYST
+  ARCHITECT
+  SCOUT
+  DATA_ENGINEER
+  BACKEND_CODER
+  FRONTEND_CODER
+  MOBILE_CODER
+  DEVOPS
+  TESTER
+  DEBUGGER
+  REVIEWER
+  SECURITY
+  GIT
+  VERIFIER
+  TECH_WRITER
+}
+
 enum TaskStatus {
   BACKLOG
+  PLANNING
   IN_PROGRESS
-  REVIEW
+  IN_REVIEW
+  TESTING
+  NEEDS_REVISION
+  BLOCKED
   DONE
+  CANCELLED
 }
 
 enum TaskPriority {
@@ -25,6 +49,15 @@ enum TaskPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum TaskEventType {
+  STARTED
+  COMPLETED
+  FAILED
+  RETURNED_FOR_REVISION
+  BLOCKED
+  ESCALATED
 }
 
 model Workspace {
@@ -41,42 +74,94 @@ model Workspace {
 }
 
 model Agent {
-  id          String      @id @default(uuid())
-  name        String
-  color       String?
-  status      AgentStatus @default(IDLE)
-  positionX   Float       @default(0)
-  positionY   Float       @default(0)
-  workspaceId String
-  currentTaskId String?   @unique
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id             String      @id @default(uuid())
+  name           String
+  color          String?
+  status         AgentStatus @default(IDLE)
+  positionX      Float       @default(0)
+  positionY      Float       @default(0)
+  workspaceId    String
+  currentTaskId  String?     @unique
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  role           AgentRole
+  isParallelSafe Boolean     @default(false)
 
-  workspace     Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  currentTask   Task?      @relation("AgentCurrentTask", fields: [currentTaskId], references: [id], onDelete: SetNull)
-  assignedTasks Task[]     @relation("AssignedTasks")
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  currentTask     Task?       @relation("AgentCurrentTask", fields: [currentTaskId], references: [id], onDelete: SetNull)
+  assignedTasks   Task[]      @relation("AssignedTasks")
+  createdTasks    Task[]      @relation("TaskCreatedBy")
+  triggeredEvents TaskEvent[] @relation("TaskEventAgent")
+  incomingReturns TaskEvent[] @relation("TaskEventReturnTo")
 
   @@index([workspaceId])
   @@map("agents")
 }
 
 model Task {
-  id            String       @id @default(uuid())
-  title         String
-  description   String?
-  status        TaskStatus   @default(BACKLOG)
-  priority      TaskPriority @default(MEDIUM)
-  workspaceId   String
-  assignedAgentId String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  completedAt   DateTime?
+  id               String       @id @default(uuid())
+  title            String
+  description      String?
+  status           TaskStatus   @default(BACKLOG)
+  priority         TaskPriority @default(MEDIUM)
+  workspaceId      String
+  assignedAgentId  String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  completedAt      DateTime?
+  createdByAgentId String?
+  parentTaskId     String?
+  priorityScore    Int          @default(0)
+  attemptCount     Int          @default(0)
+  maxAttempts      Int          @default(3)
 
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  assignedAgent Agent?   @relation("AssignedTasks", fields: [assignedAgentId], references: [id], onDelete: SetNull)
-  currentAgents Agent[]   @relation("AgentCurrentTask")
+  workspace      Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignedAgent  Agent?           @relation("AssignedTasks", fields: [assignedAgentId], references: [id], onDelete: SetNull)
+  currentAgents  Agent[]          @relation("AgentCurrentTask")
+  createdByAgent Agent?           @relation("TaskCreatedBy", fields: [createdByAgentId], references: [id], onDelete: SetNull)
+  parentTask     Task?            @relation("TaskHierarchy", fields: [parentTaskId], references: [id], onDelete: SetNull)
+  childTasks     Task[]           @relation("TaskHierarchy")
+  events         TaskEvent[]      @relation("TaskEventTask")
+  dependentOn    TaskDependency[] @relation("TaskDependencyDependent")
+  dependencyOf   TaskDependency[] @relation("TaskDependencyDependency")
 
   @@index([workspaceId])
   @@index([assignedAgentId])
   @@map("tasks")
+}
+
+model TaskEvent {
+  id                String        @id @default(uuid())
+  taskId            String
+  agentId           String?
+  eventType         TaskEventType
+  fromStatus        TaskStatus
+  toStatus          TaskStatus?
+  notes             String?
+  returnedToAgentId String?
+  timestamp         DateTime      @default(now())
+
+  task            Task   @relation("TaskEventTask", fields: [taskId], references: [id], onDelete: Cascade)
+  agent           Agent? @relation("TaskEventAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  returnedToAgent Agent? @relation("TaskEventReturnTo", fields: [returnedToAgentId], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@index([agentId])
+  @@index([returnedToAgentId])
+  @@map("task_events")
+}
+
+model TaskDependency {
+  id               String   @id @default(uuid())
+  dependentTaskId  String
+  dependencyTaskId String
+  createdAt        DateTime @default(now())
+
+  dependentTask  Task @relation("TaskDependencyDependent", fields: [dependentTaskId], references: [id], onDelete: Cascade)
+  dependencyTask Task @relation("TaskDependencyDependency", fields: [dependencyTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([dependentTaskId, dependencyTaskId])
+  @@index([dependentTaskId])
+  @@index([dependencyTaskId])
+  @@map("task_dependencies")
 }

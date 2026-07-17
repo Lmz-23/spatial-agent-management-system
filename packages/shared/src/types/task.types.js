@@ -1,10 +1,14 @@
 // Task related types
 export var TaskStatus;
 (function (TaskStatus) {
-    TaskStatus["PENDING"] = "pending";
-    TaskStatus["ASSIGNED"] = "assigned";
+    TaskStatus["BACKLOG"] = "backlog";
+    TaskStatus["PLANNING"] = "planning";
     TaskStatus["IN_PROGRESS"] = "in_progress";
-    TaskStatus["COMPLETED"] = "completed";
+    TaskStatus["IN_REVIEW"] = "in_review";
+    TaskStatus["TESTING"] = "testing";
+    TaskStatus["NEEDS_REVISION"] = "needs_revision";
+    TaskStatus["BLOCKED"] = "blocked";
+    TaskStatus["DONE"] = "done";
     TaskStatus["CANCELLED"] = "cancelled";
 })(TaskStatus || (TaskStatus = {}));
 export var TaskPriority;

@@ -22,13 +22,13 @@ export async function tasksModule(
 
   // Routes are registered under /api/tasks prefix (set in app.ts)
   // Using type assertion for onRequest hook to bypass TypeScript generics issue with hooks
-  fastify.get('/', { onRequest: [authHook as never] }, (req, reply) => controller.getAll(req, reply));
-  fastify.get('/:id', { onRequest: [authHook as never, validateParams(taskIdParamSchema) as never] }, (req, reply) => controller.getById(req, reply));
-  fastify.get('/workspace/:workspaceId', { onRequest: [authHook as never, validateParams(workspaceIdParamSchema) as never] }, (req, reply) => controller.getByWorkspace(req, reply));
-  fastify.post('/', { onRequest: [authHook as never, validateBody(createTaskSchema) as never] }, (req, reply) => controller.create(req, reply));
-  fastify.patch('/:id', { onRequest: [authHook as never, validateParams(taskIdParamSchema) as never, validateBody(updateTaskSchema) as never] }, (req, reply) => controller.update(req, reply));
-  fastify.delete('/:id', { onRequest: [authHook as never, validateParams(taskIdParamSchema) as never] }, (req, reply) => controller.remove(req, reply));
-  fastify.post('/:id/assign/:agentId', { onRequest: [authHook as never, validateParams(taskWithAgentIdParamSchema) as never] }, (req, reply) => controller.assignToAgent(req, reply));
+  fastify.get('/', { onRequest: [authHook as never] }, (req, reply) => controller.getAll(req as never, reply));
+  fastify.get('/:id', { onRequest: [authHook as never, validateParams(taskIdParamSchema) as never] }, (req, reply) => controller.getById(req as never, reply));
+  fastify.get('/workspace/:workspaceId', { onRequest: [authHook as never, validateParams(workspaceIdParamSchema) as never] }, (req, reply) => controller.getByWorkspace(req as never, reply));
+  fastify.post('/', { onRequest: [authHook as never, validateBody(createTaskSchema) as never] }, (req, reply) => controller.create(req as never, reply));
+  fastify.patch('/:id', { onRequest: [authHook as never, validateParams(taskIdParamSchema) as never, validateBody(updateTaskSchema) as never] }, (req, reply) => controller.update(req as never, reply));
+  fastify.delete('/:id', { onRequest: [authHook as never, validateParams(taskIdParamSchema) as never] }, (req, reply) => controller.remove(req as never, reply));
+  fastify.post('/:id/assign/:agentId', { onRequest: [authHook as never, validateParams(taskWithAgentIdParamSchema) as never] }, (req, reply) => controller.assignToAgent(req as never, reply));
 }
 
 export default tasksModule;

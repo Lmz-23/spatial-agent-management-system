@@ -1,10 +1,14 @@
 // Task related types
 
 export enum TaskStatus {
-  PENDING = 'pending',
-  ASSIGNED = 'assigned',
+  BACKLOG = 'backlog',
+  PLANNING = 'planning',
   IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
+  IN_REVIEW = 'in_review',
+  TESTING = 'testing',
+  NEEDS_REVISION = 'needs_revision',
+  BLOCKED = 'blocked',
+  DONE = 'done',
   CANCELLED = 'cancelled',
 }
 

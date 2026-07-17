@@ -8,7 +8,7 @@ import { WebSocketService } from '../websocket/websocket.service.js';
 import type { FastifyBaseLogger } from 'fastify';
 import { NotFoundError, ValidationError } from '../../utils/errors/app.error.js';
 
-const VALID_STATUSES = ['BACKLOG', 'IN_PROGRESS', 'REVIEW', 'DONE'] as const;
+const VALID_STATUSES = ['BACKLOG', 'PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'TESTING', 'NEEDS_REVISION', 'BLOCKED', 'DONE', 'CANCELLED'] as const;
 type ValidStatus = (typeof VALID_STATUSES)[number];
 
 export class TasksService {
