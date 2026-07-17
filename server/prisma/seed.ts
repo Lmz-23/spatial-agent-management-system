@@ -46,6 +46,7 @@ async function main() {
     }),
     prisma.agent.create({
       data: {
+        id: '00000000-0000-0000-0000-000000000003',
         name: 'Agent Charlie',
         color: '#3357FF',
         status: AgentStatus.IDLE,
