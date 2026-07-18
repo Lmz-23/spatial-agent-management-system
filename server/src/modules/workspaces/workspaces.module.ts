@@ -23,8 +23,8 @@ export async function workspacesModule(
   // Using type assertion for onRequest hook to bypass TypeScript generics issue with hooks
   fastify.get('/', { onRequest: [authHook as never] }, (req, reply) => controller.getAll(req as never, reply));
   fastify.get('/:id', { onRequest: [authHook as never, validateParams(workspaceIdParamSchema) as never] }, (req, reply) => controller.getById(req as never, reply));
-  fastify.post('/', { onRequest: [authHook as never, validateBody(createWorkspaceSchema) as never] }, (req, reply) => controller.create(req as never, reply));
-  fastify.patch('/:id', { onRequest: [authHook as never, validateParams(workspaceIdParamSchema) as never, validateBody(updateWorkspaceSchema) as never] }, (req, reply) => controller.update(req as never, reply));
+  fastify.post('/', { onRequest: [authHook as never], preValidation: [validateBody(createWorkspaceSchema) as never] }, (req, reply) => controller.create(req as never, reply));
+  fastify.patch('/:id', { onRequest: [authHook as never], preValidation: [validateParams(workspaceIdParamSchema) as never, validateBody(updateWorkspaceSchema) as never] }, (req, reply) => controller.update(req as never, reply));
   fastify.delete('/:id', { onRequest: [authHook as never, validateParams(workspaceIdParamSchema) as never] }, (req, reply) => controller.remove(req as never, reply));
 }
 

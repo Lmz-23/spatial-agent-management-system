@@ -25,10 +25,10 @@ export async function agentsModule(
   fastify.get('/', { onRequest: [authHook as never] }, (req, reply) => controller.getAll(req as never, reply));
   fastify.get('/:id', { onRequest: [authHook as never, validateParams(agentIdParamSchema) as never] }, (req, reply) => controller.getById(req as never, reply));
   fastify.get('/workspace/:workspaceId', { onRequest: [authHook as never, validateParams(agentWithWorkspaceIdParamSchema) as never] }, (req, reply) => controller.getByWorkspace(req as never, reply));
-  fastify.post('/', { onRequest: [authHook as never, validateBody(createAgentSchema) as never] }, (req, reply) => controller.create(req as never, reply));
-  fastify.patch('/:id', { onRequest: [authHook as never, validateParams(agentIdParamSchema) as never, validateBody(updateAgentSchema) as never] }, (req, reply) => controller.update(req as never, reply));
-  fastify.patch('/:id/status', { onRequest: [authHook as never, validateParams(agentIdParamSchema) as never, validateBody(updateAgentStatusSchema) as never] }, (req, reply) => controller.updateStatus(req as never, reply));
-  fastify.patch('/:id/position', { onRequest: [authHook as never, validateParams(agentIdParamSchema) as never, validateBody(updateAgentPositionSchema) as never] }, (req, reply) => controller.updatePosition(req as never, reply));
+  fastify.post('/', { onRequest: [authHook as never], preValidation: [validateBody(createAgentSchema) as never] }, (req, reply) => controller.create(req as never, reply));
+  fastify.patch('/:id', { onRequest: [authHook as never], preValidation: [validateParams(agentIdParamSchema) as never, validateBody(updateAgentSchema) as never] }, (req, reply) => controller.update(req as never, reply));
+  fastify.patch('/:id/status', { onRequest: [authHook as never], preValidation: [validateParams(agentIdParamSchema) as never, validateBody(updateAgentStatusSchema) as never] }, (req, reply) => controller.updateStatus(req as never, reply));
+  fastify.patch('/:id/position', { onRequest: [authHook as never], preValidation: [validateParams(agentIdParamSchema) as never, validateBody(updateAgentPositionSchema) as never] }, (req, reply) => controller.updatePosition(req as never, reply));
   fastify.delete('/:id', { onRequest: [authHook as never, validateParams(agentIdParamSchema) as never] }, (req, reply) => controller.remove(req as never, reply));
 }
 

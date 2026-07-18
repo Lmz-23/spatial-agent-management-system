@@ -23,7 +23,7 @@ import {
 const OPENCODE_API = process.env.OPENCODE_API ?? "http://localhost:54321";
 const SAMS_API = process.env.SAMS_API ?? "http://localhost:3000";
 const SAMS_API_TOKEN = process.env.SAMS_API_TOKEN;
-const CHARLIE_AGENT_ID = "00000000-0000-0000-0000-000000000003";
+const CHARLIE_AGENT_ID = "171b6c31-a7a9-49f6-94ea-72891ef15960";
 const POC_LOG_PATH = "/tmp/sams-bridge-poc.log";
 // ====================
 
