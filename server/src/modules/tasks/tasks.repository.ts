@@ -33,6 +33,8 @@ export class TasksRepository {
     {
       id: 'mock-1',
       name: 'Agent Alice',
+      displayName: 'Agent Alice',
+      opencodeName: 'agent-alice',
       color: '#FF5733',
       status: 'IDLE',
       positionX: 100,
@@ -47,6 +49,8 @@ export class TasksRepository {
     {
       id: 'mock-2',
       name: 'Agent Bob',
+      displayName: 'Agent Bob',
+      opencodeName: 'agent-bob',
       color: '#33FF57',
       status: 'WORKING',
       positionX: 300,

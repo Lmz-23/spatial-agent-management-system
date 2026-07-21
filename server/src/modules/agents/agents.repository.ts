@@ -32,6 +32,8 @@ export class AgentsRepository {
     {
       id: 'mock-1',
       name: 'Agent Alice',
+      displayName: 'Agent Alice',
+      opencodeName: 'agent-alice',
       color: '#FF5733',
       status: 'IDLE' as AgentStatus,
       positionX: 100,
@@ -48,6 +50,8 @@ export class AgentsRepository {
     {
       id: 'mock-2',
       name: 'Agent Bob',
+      displayName: 'Agent Bob',
+      opencodeName: 'agent-bob',
       color: '#33FF57',
       status: 'WORKING' as AgentStatus,
       positionX: 300,
@@ -64,6 +68,8 @@ export class AgentsRepository {
     {
       id: 'mock-3',
       name: 'Agent Charlie',
+      displayName: 'Agent Charlie',
+      opencodeName: 'agent-charlie',
       color: '#3357FF',
       status: 'IDLE' as AgentStatus,
       positionX: 500,
@@ -162,6 +168,8 @@ export class AgentsRepository {
       const newAgent: AgentWithRelations = {
         id: crypto.randomUUID(),
         name: data.name,
+        displayName: data.name,
+        opencodeName: null,
         color: data.color ?? '#CCCCCC',
         status: 'IDLE' as AgentStatus,
         positionX: data.positionX ?? 0,
