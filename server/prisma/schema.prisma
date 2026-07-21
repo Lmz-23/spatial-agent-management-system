@@ -76,6 +76,12 @@ model Workspace {
 model Agent {
   id             String      @id @default(uuid())
   name           String
+  // displayName: human-readable name shown in UI (e.g. "Backend Coder").
+  // opencodeName: kebab-case id of the opencode agent (e.g. "backend-coder"),
+  // used by the bridge to map opencode events ↔ DB agents.
+  // Both are nullable for backward-compat with legacy rows; seed populates them.
+  displayName    String?
+  opencodeName   String?     @unique
   color          String?
   status         AgentStatus @default(IDLE)
   positionX      Float       @default(0)
