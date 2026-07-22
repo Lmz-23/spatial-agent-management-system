@@ -1,4 +1,13 @@
-import type { PrismaClient, Task, Workspace, Agent, TaskStatus, TaskPriority } from '@prisma/client';
+import type {
+  PrismaClient,
+  Task,
+  TaskEvent,
+  Workspace,
+  Agent,
+  TaskStatus,
+  TaskEventType,
+  TaskPriority,
+} from '@prisma/client';
 import { AgentRole } from '@prisma/client';
 import type { CreateTaskDto } from './dto/create-task.dto.js';
 import type { UpdateTaskDto } from './dto/update-task.dto.js';
@@ -9,6 +18,11 @@ export type TaskWithRelations = Task & {
 };
 
 export type TaskBasic = Pick<Task, 'id' | 'title' | 'description' | 'status' | 'workspaceId' | 'assignedAgentId' | 'createdAt' | 'updatedAt' | 'completedAt'>;
+
+export type TaskEventWithRelations = TaskEvent & {
+  agent: Agent | null;
+  returnedToAgent: Agent | null;
+};
 
 export class TasksRepository {
   /**
@@ -292,6 +306,52 @@ export class TasksRepository {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  async createEventAndUpdateTask(input: {
+    taskId: string;
+    event: {
+      taskId: string;
+      agentId: string;
+      eventType: TaskEventType;
+      fromStatus: TaskStatus;
+      toStatus?: TaskStatus | null;
+      notes?: string | null;
+      returnedToAgentId?: string | null;
+    };
+    taskUpdate: {
+      status?: TaskStatus;
+      attemptCount?: { increment: number };
+    };
+    selectRelations: { agent?: boolean; returnedToAgent?: boolean };
+  }): Promise<{ event: TaskEventWithRelations; task: TaskWithRelations }> {
+    if (!this.prisma) {
+      throw new Error('Prisma is required to create task events');
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const event = await tx.taskEvent.create({
+          data: input.event,
+          include: {
+            agent: input.selectRelations.agent ?? false,
+            returnedToAgent: input.selectRelations.returnedToAgent ?? false,
+          },
+        });
+        const task = await tx.task.update({
+          where: { id: input.taskId },
+          data: input.taskUpdate,
+          include: {
+            assignedAgent: true,
+            workspace: true,
+            events: { orderBy: { timestamp: 'desc' } },
+          },
+        });
+        return { event, task };
+      });
+    } catch (error) {
+      throw error;
     }
   }
 

@@ -3,7 +3,14 @@ import { TasksController } from './tasks.controller.js';
 import { TasksService } from './tasks.service.js';
 import { TasksRepository } from './tasks.repository.js';
 import { authHook } from '../../plugins/auth.plugin.js';
-import { createTaskSchema, updateTaskSchema, taskIdParamSchema, taskWithAgentIdParamSchema, workspaceIdParamSchema } from '../../schemas/task.schema.js';
+import {
+  createTaskEventSchema,
+  createTaskSchema,
+  updateTaskSchema,
+  taskIdParamSchema,
+  taskWithAgentIdParamSchema,
+  workspaceIdParamSchema,
+} from '../../schemas/task.schema.js';
 import { validateBody, validateParams } from '../../utils/validate.js';
 import { requirePrisma } from '../../utils/prisma.js';
 
@@ -26,6 +33,13 @@ export async function tasksModule(
   fastify.get('/:id', { onRequest: [authHook as never, validateParams(taskIdParamSchema) as never] }, (req, reply) => controller.getById(req as never, reply));
   fastify.get('/workspace/:workspaceId', { onRequest: [authHook as never, validateParams(workspaceIdParamSchema) as never] }, (req, reply) => controller.getByWorkspace(req as never, reply));
   fastify.post('/', { onRequest: [authHook as never], preValidation: [validateBody(createTaskSchema) as never] }, (req, reply) => controller.create(req as never, reply));
+  fastify.post('/:id/events', {
+    onRequest: [authHook as never],
+    preValidation: [
+      validateParams(taskIdParamSchema) as never,
+      validateBody(createTaskEventSchema) as never,
+    ],
+  }, (req, reply) => controller.createEvent(req as never, reply));
   fastify.patch('/:id', { onRequest: [authHook as never], preValidation: [validateParams(taskIdParamSchema) as never, validateBody(updateTaskSchema) as never] }, (req, reply) => controller.update(req as never, reply));
   fastify.delete('/:id', { onRequest: [authHook as never, validateParams(taskIdParamSchema) as never] }, (req, reply) => controller.remove(req as never, reply));
   fastify.post('/:id/assign/:agentId', { onRequest: [authHook as never, validateParams(taskWithAgentIdParamSchema) as never] }, (req, reply) => controller.assignToAgent(req as never, reply));

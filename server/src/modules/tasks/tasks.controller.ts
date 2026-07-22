@@ -1,4 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import type { CreateTaskEventDto } from '../../schemas/task.schema.js';
+import { AppError } from '../../utils/errors/app.error.js';
 import type { CreateTaskDto } from './dto/create-task.dto.js';
 import type { UpdateTaskDto } from './dto/update-task.dto.js';
 import { TasksService } from './tasks.service.js';
@@ -39,6 +41,21 @@ export class TasksController {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Validation error';
       return reply.status(400).send({ error: message });
+    }
+  }
+
+  async createEvent(
+    request: FastifyRequest<{ Params: { id: string }; Body: CreateTaskEventDto }>,
+    reply: FastifyReply,
+  ): Promise<unknown> {
+    try {
+      const event = await this.service.createEvent(request.params.id, request.body);
+      return reply.status(201).send({ data: event });
+    } catch (error) {
+      // AppError (incluye ValidationError, NotFoundError, etc.) y cualquier otro error
+      // se re-throw para que httpErrorHandler los formatee con el shape canónico
+      // { statusCode, error: 'INTERNAL_ERROR' | 'VALIDATION_ERROR' | ..., message }.
+      throw error;
     }
   }
 

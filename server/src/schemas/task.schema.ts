@@ -1,4 +1,4 @@
-import { TaskPriority } from '@prisma/client';
+import { TaskEventType, TaskPriority, TaskStatus } from '@prisma/client';
 import { z } from 'zod';
 
 export const createTaskSchema = z.object({
@@ -17,6 +17,16 @@ export const updateTaskSchema = z.object({
   priority: z.nativeEnum(TaskPriority).optional(),
   assignedAgentId: z.string().uuid().nullable().optional(),
 });
+
+export const createTaskEventSchema = z.object({
+  agentId: z.string().uuid(),
+  eventType: z.nativeEnum(TaskEventType),
+  toStatus: z.nativeEnum(TaskStatus).optional(),
+  notes: z.string().max(2000).optional(),
+  returnedToAgentId: z.string().uuid().optional(),
+});
+
+export type CreateTaskEventDto = z.infer<typeof createTaskEventSchema>;
 
 export const taskIdParamSchema = z.object({
   id: z.string().uuid(),

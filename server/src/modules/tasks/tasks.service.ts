@@ -1,8 +1,11 @@
+import { TaskEventType, TaskStatus } from '@prisma/client';
 import type { PrismaClient, Agent, Workspace } from '@prisma/client';
+import type { CreateTaskEventDto } from '../../schemas/task.schema.js';
 import type { CreateTaskDto } from './dto/create-task.dto.js';
+import type { TaskEventResponseDto } from './dto/task-event-response.dto.js';
 import type { UpdateTaskDto } from './dto/update-task.dto.js';
 import type { TaskResponseDto } from './dto/task-response.dto.js';
-import type { TaskWithRelations } from './tasks.repository.js';
+import type { TaskEventWithRelations, TaskWithRelations } from './tasks.repository.js';
 import { TasksRepository } from './tasks.repository.js';
 import { WebSocketService } from '../websocket/websocket.service.js';
 import type { FastifyBaseLogger } from 'fastify';
@@ -10,6 +13,11 @@ import { NotFoundError, ValidationError } from '../../utils/errors/app.error.js'
 
 const VALID_STATUSES = ['BACKLOG', 'PLANNING', 'IN_PROGRESS', 'IN_REVIEW', 'TESTING', 'NEEDS_REVISION', 'BLOCKED', 'DONE', 'CANCELLED'] as const;
 type ValidStatus = (typeof VALID_STATUSES)[number];
+
+// Estados donde la task está "muerta" — no se aceptan nuevas transiciones activas.
+// (Aplicado específicamente a RETURNED_FOR_REVISION; otros eventos mantienen su semántica.)
+const TERMINAL_STATUSES = ['BLOCKED', 'DONE', 'CANCELLED'] as const;
+type TerminalStatus = (typeof TERMINAL_STATUSES)[number];
 
 export class TasksService {
   constructor(
@@ -112,6 +120,105 @@ export class TasksService {
     return this.repository.delete(id);
   }
 
+  async createEvent(taskId: string, data: CreateTaskEventDto): Promise<TaskEventResponseDto> {
+    const task = await this.repository.findById(taskId);
+    if (!task) {
+      throw new NotFoundError('Task');
+    }
+
+    const fromStatus = task.status;
+    let toStatus = data.toStatus;
+    let incrementAttemptCount = false;
+
+    switch (data.eventType) {
+      case TaskEventType.STARTED:
+        toStatus ??= TaskStatus.IN_PROGRESS;
+        break;
+      case TaskEventType.COMPLETED:
+        toStatus ??= TaskStatus.DONE;
+        break;
+      case TaskEventType.FAILED:
+        break;
+      case TaskEventType.RETURNED_FOR_REVISION: {
+        if (!data.returnedToAgentId) {
+          throw new ValidationError(
+            'returnedToAgentId required for RETURNED_FOR_REVISION',
+          );
+        }
+
+        // No permitir RETURNED_FOR_REVISION sobre tasks en estado terminal.
+        // Mover una task DONE/CANCELLED/BLOCKED de vuelta a NEEDS_REVISION es incoherente
+        // (transición fromStatus: BLOCKED -> toStatus: NEEDS_REVISION) y sacaría a la task
+        // de un estado terminal para meterla en uno activo.
+        if (TERMINAL_STATUSES.includes(fromStatus as TerminalStatus)) {
+          throw new ValidationError(
+            `Cannot RETURN_FOR_REVISION a task in terminal status (${fromStatus})`,
+          );
+        }
+
+        incrementAttemptCount = true;
+        const nextAttemptCount = task.attemptCount + 1;
+        if (nextAttemptCount >= task.maxAttempts) {
+          toStatus = TaskStatus.BLOCKED;
+          this.log.warn(
+            {
+              taskId,
+              attemptCount: nextAttemptCount,
+              maxAttempts: task.maxAttempts,
+            },
+            'Task blocked after reaching maximum revision attempts',
+          );
+        } else {
+          toStatus = TaskStatus.NEEDS_REVISION;
+        }
+        break;
+      }
+      case TaskEventType.BLOCKED:
+        toStatus ??= TaskStatus.BLOCKED;
+        break;
+      case TaskEventType.ESCALATED:
+        toStatus ??= TaskStatus.IN_REVIEW;
+        break;
+    }
+
+    const taskUpdate: {
+      status?: TaskStatus;
+      attemptCount?: { increment: number };
+    } = {};
+    if (toStatus !== undefined) {
+      taskUpdate.status = toStatus;
+    }
+    if (incrementAttemptCount) {
+      taskUpdate.attemptCount = { increment: 1 };
+    }
+
+    const { event, task: updatedTask } = await this.repository.createEventAndUpdateTask({
+      taskId,
+      event: {
+        taskId,
+        agentId: data.agentId,
+        eventType: data.eventType,
+        fromStatus,
+        toStatus: toStatus ?? null,
+        notes: data.notes ?? null,
+        returnedToAgentId: data.returnedToAgentId ?? null,
+      },
+      taskUpdate,
+      selectRelations: { agent: true, returnedToAgent: true },
+    });
+
+    try {
+      await this.wsService.broadcastToWorkspace(updatedTask.workspaceId, 'task:event', {
+        event,
+        task: updatedTask,
+      });
+    } catch (error) {
+      this.log.error({ err: error, taskId }, 'Failed to emit task:event event');
+    }
+
+    return this.toEventResponseDto(event);
+  }
+
   async assignToAgent(taskId: string, agentId: string): Promise<TaskResponseDto | null> {
     // Step 1: Verify task exists
     const task = await this.repository.findById(taskId);
@@ -165,6 +272,20 @@ export class TasksService {
       throw new NotFoundError('Workspace');
     }
     return workspace;
+  }
+
+  private toEventResponseDto(event: TaskEventWithRelations): TaskEventResponseDto {
+    return {
+      id: event.id,
+      taskId: event.taskId,
+      agentId: event.agentId,
+      eventType: event.eventType,
+      fromStatus: event.fromStatus,
+      toStatus: event.toStatus,
+      notes: event.notes,
+      returnedToAgentId: event.returnedToAgentId,
+      timestamp: event.timestamp,
+    };
   }
 
   private toResponseDto(task: TaskWithRelations): TaskResponseDto {
