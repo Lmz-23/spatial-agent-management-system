@@ -127,10 +127,10 @@ async function main(): Promise<void> {
 
   // 2. Workspace idempotente: stable ID entre ejecuciones.
   const workspace = await prisma.workspace.upsert({
-    where: { id: 'seed-workspace-alpha' }, // estable; nadie más usa este id
+    where: { id: '00000000-0000-4000-8000-000000000001' }, // UUID v4 fijo; estable entre ejecuciones
     update: { name: WORKSPACE_NAME, projectName: 'Alpha Core' },
     create: {
-      id: 'seed-workspace-alpha',
+      id: '00000000-0000-4000-8000-000000000001',
       name: WORKSPACE_NAME,
       projectName: 'Alpha Core',
     },
