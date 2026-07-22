@@ -152,7 +152,7 @@ export class TasksService {
         // de un estado terminal para meterla en uno activo.
         if (TERMINAL_STATUSES.includes(fromStatus as TerminalStatus)) {
           throw new ValidationError(
-            `Cannot RETURN_FOR_REVISION a task in terminal status (${fromStatus})`,
+            `Cannot ${TaskEventType.RETURNED_FOR_REVISION} a task in terminal status (${fromStatus})`,
           );
         }
 
