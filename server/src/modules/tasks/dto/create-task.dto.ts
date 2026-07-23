@@ -6,4 +6,5 @@ export interface CreateTaskDto {
   status?: TaskStatus;
   priority?: TaskPriority;
   workspaceId: string;
+  assignedAgentId?: string | null;
 }

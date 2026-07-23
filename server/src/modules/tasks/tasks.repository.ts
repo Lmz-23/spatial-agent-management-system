@@ -235,7 +235,7 @@ export class TasksRepository {
         status: (data.status ?? 'BACKLOG') as TaskStatus,
         priority: (data.priority ?? 'MEDIUM') as TaskPriority,
         workspaceId: data.workspaceId,
-        assignedAgentId: null,
+        assignedAgentId: data.assignedAgentId ?? null,
         createdByAgentId: null,
         parentTaskId: null,
         priorityScore: 0,
@@ -256,7 +256,7 @@ export class TasksRepository {
         description: data.description ?? null,
         status: data.status ?? 'BACKLOG',
         workspaceId: data.workspaceId,
-        assignedAgentId: null,
+        assignedAgentId: data.assignedAgentId ?? null,
         completedAt: null,
       },
       include: {
