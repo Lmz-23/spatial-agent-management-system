@@ -40,9 +40,10 @@ SAMS is designed for the real-time virtual-office use case: multiple clients joi
 ## ✨ Features
 
 - ✅ **Multi-tenant workspaces** — organize agents and tasks into independent workspace contexts.
+- 📋 **Task lifecycle tracking** — record `TaskEvent` history (`STARTED`, `COMPLETED`, `FAILED`, `RETURNED_FOR_REVISION`, `BLOCKED`, `ESCALATED`) with automatic status transitions and a bounded revision-attempt limit before a task is auto-blocked.
 - 🚀 **Real-time WebSocket synchronization** — propagate movement, lifecycle, assignment, and status events to connected workspace clients.
 - 🎨 **Interactive 2D office scene** — render agents and office activity with PixiJS and `@pixi/react`.
-- 🤖 **Agent roles and states** — Client-side agent roles (`ORQUESTADOR`, `CODER`, `REVIEWER`, `TESTER`) for visual differentiation in the 2D scene, combined with `IDLE`, `WALKING`, and `WORKING` states.
+- 🤖 **Agent states** — `IDLE`, `WALKING`, and `WORKING` states are persisted server-side and drive the 2D scene. The client also renders a small, purely cosmetic set of roles (`ORQUESTADOR`, `CODER`, `REVIEWER`, `TESTER`) for color/size differentiation in the PixiJS scene, separate from the richer `AgentRole` enum persisted in the Prisma schema (see [Roadmap](#-roadmap)).
 - 🔌 **REST API and WebSocket event contract** — combine resource-oriented HTTP operations with low-latency event delivery.
 - 🔒 **JWT authentication** — protect resource endpoints and authenticated WebSocket connections.
 - 🛡️ **Rate limiting** — apply HTTP request limits and per-client WebSocket message limits.
@@ -411,14 +412,57 @@ curl http://localhost:3000/api/agents/workspace/<workspace-id> \
 | `GET` | `/api/tasks/:id` | Get a task by UUID |
 | `GET` | `/api/tasks/workspace/:workspaceId` | List tasks in a workspace |
 | `POST` | `/api/tasks/` | Create a task |
-| `PATCH` | `/api/tasks/:id` | Update task details or assignment |
+| `PATCH` | `/api/tasks/:id` | Update task `title`, `description`, or `status` |
 | `DELETE` | `/api/tasks/:id` | Delete a task |
-| `POST` | `/api/tasks/:id/assign/:agentId` | Assign a task to an agent |
+| `POST` | `/api/tasks/:id/assign/:agentId` | Assign a task to an agent (sets `assignedAgentId`, moves the task to `IN_PROGRESS`, and sets the agent to `WORKING`) |
+| `POST` | `/api/tasks/:id/events` | Record a task lifecycle event and transition its status |
+
+> **Note:** the request validation schema for `PATCH /api/tasks/:id` also accepts `priority` and `assignedAgentId`, but the current implementation only persists `title`, `description`, and `status` — `priority` and `assignedAgentId` are silently ignored. Assignment must be made through the dedicated `POST /api/tasks/:id/assign/:agentId` endpoint above.
 
 ```bash
 curl --request POST \
   http://localhost:3000/api/tasks/<task-id>/assign/<agent-id> \
   --header 'Authorization: Bearer <jwt>'
+```
+
+##### Task events (`POST /api/tasks/:id/events`)
+
+Records a `TaskEvent` row for a task and, depending on `eventType`, transitions the task's `status`. This is the mechanism agents use to report progress (start, completion, failure, escalation, or a revision request) on a task.
+
+Request body:
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `agentId` | UUID | Yes | Agent reporting the event |
+| `eventType` | `TaskEventType` | Yes | One of `STARTED`, `COMPLETED`, `FAILED`, `RETURNED_FOR_REVISION`, `BLOCKED`, `ESCALATED` |
+| `toStatus` | `TaskStatus` | No | Explicit target status; if omitted, the server derives one from `eventType` (see below) |
+| `notes` | string (max 2000) | No | Free-text context for the event |
+| `returnedToAgentId` | UUID | Only for `RETURNED_FOR_REVISION` | Agent the task is being returned to |
+
+`TaskEventType` and `TaskStatus` are Prisma enums defined in `server/prisma/schema.prisma` (not currently duplicated in `@sams/shared`). Default status transitions when `toStatus` is not provided:
+
+| `eventType` | Resulting `status` |
+| --- | --- |
+| `STARTED` | `IN_PROGRESS` |
+| `COMPLETED` | `DONE` |
+| `FAILED` | unchanged (caller must pass `toStatus` if a change is needed) |
+| `RETURNED_FOR_REVISION` | `NEEDS_REVISION`, or `BLOCKED` once `attemptCount` reaches the task's `maxAttempts` |
+| `BLOCKED` | `BLOCKED` |
+| `ESCALATED` | `IN_REVIEW` |
+
+`RETURNED_FOR_REVISION` requires `returnedToAgentId` and is rejected with a validation error if the task is already in a terminal status (`BLOCKED`, `DONE`, or `CANCELLED`).
+
+```bash
+curl --request POST \
+  http://localhost:3000/api/tasks/<task-id>/events \
+  --header 'Authorization: Bearer <jwt>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "agentId": "<agent-id>",
+    "eventType": "RETURNED_FOR_REVISION",
+    "returnedToAgentId": "<agent-id>",
+    "notes": "Missing edge-case handling"
+  }'
 ```
 
 ### WebSocket Connection
@@ -458,74 +502,51 @@ Client messages use a `type` and `payload`, with an optional `requestId`. Server
 
 ### WebSocket Events
 
-The shared event names are defined in `packages/shared/src/constants/socket.events.ts`.
+Event name constants live in `packages/shared/src/constants/socket.events.ts` (`SOCKET_EVENTS`, `ROOM_EVENTS`), shared by client and server. The constants file declares a broader event surface than what the current server actually emits or handles — the tables below distinguish the two so the contract is not overstated.
 
-#### Agent events
+#### Implemented — server-initiated (broadcast to a workspace room)
 
-| Event | Purpose |
+| Event | Emitted by | Payload highlights |
+| --- | --- | --- |
+| `agent:created` | `POST /api/agents/` | `{ agent, workspaceId }` |
+| `agent:deleted` | `DELETE /api/agents/:id` | `{ agentId, workspaceId }` |
+| `agent:position:update` | `PATCH /api/agents/:id/position`, and relayed from the client-originated message of the same name | `{ agentId, positionX, positionY, workspaceId }` |
+| `agent:status:update` | `PATCH /api/agents/:id/status`, and `POST /api/tasks/:id/assign/:agentId` | `{ agentId, status, workspaceId }` |
+| `task:created` | `POST /api/tasks/` | `{ task, workspaceId }` |
+| `task:status:update` | `PATCH /api/tasks/:id` (when `status` changes), and `POST /api/tasks/:id/assign/:agentId` | `{ taskId, status, workspaceId }` |
+| `task:deleted` | `DELETE /api/tasks/:id` | `{ taskId, workspaceId }` |
+| `task:event` | `POST /api/tasks/:id/events` | `{ event, task }` |
+
+> **Note:** `agent:status:update` and `task:status:update`/`task:deleted`/`task:event` are the literal event names emitted at runtime. They are not present as named constants in `SOCKET_EVENTS` (which instead declares `agent:status:change`, `task:updated`, `task:completed`, `task:cancelled`, and `task:assigned` — see below).
+
+#### Implemented — connection, subscription, and room events
+
+| Event | Direction | Purpose |
+| --- | --- | --- |
+| `connection` | Server → client | Confirm an established WebSocket connection |
+| `error` | Server → client | Report authentication, validation, rate-limit, or protocol errors |
+| `subscribe` | Client → server | Request subscription to a workspace channel |
+| `unsubscribe` | Client → server | Request removal from a workspace channel |
+| `subscribed` | Server → client | Confirm a workspace subscription |
+| `unsubscribed` | Server → client | Confirm removal of a workspace subscription |
+| `room:join:workspace` | Client → server | Join a workspace room (subscribes the socket and replies `room:joined`) |
+| `room:leave:workspace` | Client → server | Leave a workspace room (unsubscribes the socket and replies `room:left`) |
+
+`room:joined` and `room:left` are server acknowledgements sent as literal strings; they are not defined in `SOCKET_EVENTS`/`ROOM_EVENTS`.
+
+#### Declared in `@sams/shared` but not currently emitted or handled
+
+The following event names exist in `SOCKET_EVENTS`/`ROOM_EVENTS` and in helper factory functions in `server/src/modules/websocket/websocket.service.ts` (`createAgentHandlers`, `createTaskHandlers`, `createWorkspaceHandlers`), but those factories are not wired into any module, so these events are never actually sent by the running server:
+
+| Event | Notes |
 | --- | --- |
-| `agent:position:update` | Publish or receive agent coordinate changes |
-| `agent:status:change` | Notify clients of an agent state transition |
-| `agent:created` | Announce a new agent |
-| `agent:updated` | Announce general agent changes |
-| `agent:deleted` | Announce agent removal |
-| `agent:assigned` | Announce an agent assignment |
-
-#### Task events
-
-| Event | Purpose |
-| --- | --- |
-| `task:created` | Announce a new task |
-| `task:updated` | Announce task changes |
-| `task:completed` | Announce task completion |
-| `task:cancelled` | Announce task cancellation |
-| `task:assigned` | Announce assignment to an agent |
-
-#### Workspace events
-
-| Event | Purpose |
-| --- | --- |
-| `workspace:created` | Announce workspace creation |
-| `workspace:updated` | Announce workspace changes |
-| `workspace:deleted` | Announce workspace removal |
-
-#### Office events
-
-| Event | Purpose |
-| --- | --- |
-| `office:created` | Announce office creation within a workspace |
-| `office:updated` | Announce office changes |
-| `office:deleted` | Announce office removal |
-
-#### Desk events
-
-| Event | Purpose |
-| --- | --- |
-| `desk:created` | Announce desk creation within an office |
-| `desk:updated` | Announce desk changes |
-| `desk:deleted` | Announce desk removal |
-| `desk:occupancy:change` | Notify clients when a desk is claimed or released by an agent |
-
-#### Connection and subscription events
-
-| Event | Purpose |
-| --- | --- |
-| `connection` | Confirm an established SAMS WebSocket connection |
-| `disconnect` | Represent connection termination |
-| `error` | Report authentication, validation, rate-limit, or protocol errors |
-| `subscribe` | Request subscription to a workspace channel |
-| `unsubscribe` | Request removal from a workspace channel |
-| `subscribed` | Confirm a workspace subscription |
-| `unsubscribed` | Confirm removal of a workspace subscription |
-
-#### Room events
-
-| Event | Purpose |
-| --- | --- |
-| `room:join:workspace` | Join a workspace room |
-| `room:leave:workspace` | Leave a workspace room |
-| `room:join:office` | Join an office room |
-| `room:leave:office` | Leave an office room |
+| `agent:updated`, `agent:assigned` | No route currently broadcasts these |
+| `task:updated`, `task:completed`, `task:cancelled`, `task:assigned` | No route currently broadcasts these (see the implemented `task:*` events above for the actual runtime behavior) |
+| `workspace:created`, `workspace:updated`, `workspace:deleted` | `WorkspacesService` does not broadcast any WebSocket event |
+| `office:created`, `office:updated`, `office:deleted` | No `Office` Prisma model or REST routes exist yet |
+| `desk:created`, `desk:updated`, `desk:deleted`, `desk:occupancy:change` | No `Desk` Prisma model or REST routes exist yet |
+| `room:join:office`, `room:leave:office` | Not handled by the WebSocket gateway's message switch |
+| `disconnect` | Declared as a constant but never sent by the server |
 
 <a id="-development"></a>
 ## 🧪 Development
@@ -567,8 +588,11 @@ The `client/test_*.mjs` files are orphaned ad-hoc browser scripts rather than an
 - [ ] Maintain a versioned `CHANGELOG.md`
 - [ ] Add a complete `CONTRIBUTING.md`
 - [ ] Adopt a `CODE_OF_CONDUCT.md`
+- [ ] Expose `Agent.role` through the Agents REST API (currently hardcoded to `ORCHESTRATOR` on creation and not returned by `AgentResponseDto`)
+- [ ] Fix `PATCH /api/tasks/:id` to persist `priority` (currently accepted by validation but silently dropped) and either support `assignedAgentId` or reject it explicitly
+- [ ] Wire the declared-but-unused `SOCKET_EVENTS`/`ROOM_EVENTS` (workspace broadcasts, `office:*`, `desk:*`, `room:join:office`) or remove them from `@sams/shared` if the office/desk resources are dropped from scope
 
-> **Note:** `AgentRole` is currently a client-side concept. Adding it to the Prisma schema (so the server and database can persist and broadcast role changes) is on the roadmap.
+> **Note:** the Prisma schema already defines a database-level `AgentRole` enum (`ORCHESTRATOR`, `ANALYST`, `ARCHITECT`, `BACKEND_CODER`, `REVIEWER`, `TESTER`, and others — see `server/prisma/schema.prisma`) and every `Agent` row has a required `role`. It is not yet exposed through the Agents REST API: `POST /api/agents/` always creates agents with `role: ORCHESTRATOR`, `role` is absent from `AgentResponseDto`, and it cannot be set or changed via `PATCH /api/agents/:id`. Only the seed script assigns varied roles directly through Prisma. Exposing `role` end-to-end through the API (and reconciling it with the client's separate, cosmetic `AgentRole` type in `client/src/office/Agent.ts`) is on the roadmap.
 
 <a id="-contributing"></a>
 ## 🤝 Contributing
